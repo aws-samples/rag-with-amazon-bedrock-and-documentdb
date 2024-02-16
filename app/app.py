@@ -123,8 +123,8 @@ def handle_input():
   document_list = []
   if 'source_documents' in result:
     for d in result['source_documents']:
-      if not (d.metadata['id'] in document_list):
-        document_list.append((d.metadata['id']))
+      if not (d.metadata['source'] in document_list):
+        document_list.append((d.metadata['source']))
 
   st.session_state.answers.append({
     'answer': result,

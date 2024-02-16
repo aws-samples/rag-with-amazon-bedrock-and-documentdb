@@ -3,17 +3,22 @@
 # vim: tabstop=2 shiftwidth=2 softtabstop=2 expandtab
 
 import sys
+sys.path.append('../libs')
+
 import json
 import os
 
 import boto3
 
-from langchain.chains import LLMChain
+from langchain.chains import ConversationalRetrievalChain
 from langchain.prompts import PromptTemplate
 from langchain_community.llms import Bedrock
 from langchain_community.embeddings import BedrockEmbeddings
 
 from pymongo import MongoClient
+
+from docdb_vector_search import DocumentDBAVectorSearch
+
 
 class bcolors:
   HEADER = '\033[95m'
@@ -28,9 +33,6 @@ class bcolors:
 
 
 MAX_HISTORY_LENGTH = 5
-
-EMBEDDINGS = None
-DOC_DB_COLLECTION = None
 
 
 def _get_credentials(secret_id: str, region_name: str) -> str:
@@ -59,101 +61,89 @@ def _get_llm(model_id='anthropic.claude-instant-v1', region_name='us-east-1'):
   return llm
 
 
+def _get_docdb_collection():
+  region = os.environ.get('AWS_REGION', 'us-east-1')
+
+  documentdb_secret_name = os.environ['DOCDB_SECRET_NAME']
+  creds = _get_credentials(documentdb_secret_name, region)
+  USER, PASSWORD = creds['username'], creds['password']
+
+  DOCDB_HOST = os.environ['DOCDB_HOST']
+  DB_NAME = os.environ['DB_NAME']
+  COLLECTION_NAME = os.environ['COLLECTION_NAME']
+
+  documentdb_client = MongoClient(
+    host=DOCDB_HOST,
+    port=27017,
+    username=USER,
+    password=PASSWORD,
+    retryWrites=False,
+    tls='true',
+    tlsCAFile="global-bundle.pem"
+  )
+
+  docdb = documentdb_client[DB_NAME]
+  doc_db_collection = docdb[COLLECTION_NAME]
+
+  return doc_db_collection
+
+
 def build_chain():
   region = os.environ.get('AWS_REGION', 'us-east-1')
   model_id = os.environ.get('BEDROCK_MODEL_ID', 'anthropic.claude-instant-v1')
 
   llm = _get_llm(model_id=model_id, region_name=region)
 
-  # Create a PromptTemplate for the user's question
-  question_prompt_template = PromptTemplate(
-    input_variables=["context", "question", "chat_history"],
-    template="Given this text extracts:\n-----\n{context}\n-----\n and also consider the history of this chat {chat_history}\nPlease answer the following question: {question}",
+  embeddings = BedrockEmbeddings(
+    region_name=region
   )
 
-  # Create an LLMChain
-  llm_chain = LLMChain(prompt=question_prompt_template, llm=llm)
+  collection = _get_docdb_collection()
+  docdb_vectorstore = DocumentDBAVectorSearch(
+    collection=collection,
+    embedding=embeddings
+  )
 
-  return llm_chain
+  retriever = docdb_vectorstore.as_retriever(search_kwargs={'similarity': 'cosine', 'k': 4})
 
+  prompt_template = """
+  The following is a friendly conversation between a human and an AI.
+  The AI is talkative and provides lots of specific details from its context.
+  If the AI does not know the answer to a question, it truthfully says it
+  does not know.
+  {context}
+  Instruction: Based on the above documents, provide a detailed answer for, {question} Answer "don't know"
+  if not present in the document.
+  Solution:"""
 
-def _get_or_create_embeddings():
-  global EMBEDDINGS
+  PROMPT = PromptTemplate(
+    template=prompt_template, input_variables=["context", "question"]
+  )
 
-  region = os.environ.get('AWS_REGION', 'us-east-1')
+  condense_qa_template = """
+  Given the following conversation and a follow up question, rephrase the follow up question
+  to be a standalone question.
 
-  if EMBEDDINGS is None:
-      EMBEDDINGS = BedrockEmbeddings(
-        region_name=region
-      )
-  return EMBEDDINGS
+  Chat History:
+  {chat_history}
+  Follow Up Input: {question}
+  Standalone question:"""
 
+  standalone_question_prompt = PromptTemplate.from_template(condense_qa_template)
 
-def _get_or_create_collection():
-  global DOC_DB_COLLECTION
+  qa = ConversationalRetrievalChain.from_llm(
+    llm=llm,
+    retriever=retriever,
+    condense_question_prompt=standalone_question_prompt,
+    return_source_documents=True,
+    combine_docs_chain_kwargs={"prompt": PROMPT}
+  )
 
-  if DOC_DB_COLLECTION is None:
-    region = os.environ.get('AWS_REGION', 'us-east-1')
-
-    documentdb_secret_name = os.environ['DOCDB_SECRET_NAME']
-    creds = _get_credentials(documentdb_secret_name, region)
-    USER, PASSWORD = creds['username'], creds['password']
-
-    DOCDB_HOST = os.environ['DOCDB_HOST']
-    DB_NAME = os.environ['DB_NAME']
-    COLLECTION_NAME = os.environ['COLLECTION_NAME']
-
-    documentdb_client = MongoClient(
-      host=DOCDB_HOST,
-      port=27017,
-      username=USER,
-      password=PASSWORD,
-      retryWrites=False,
-      tls='true',
-      tlsCAFile="global-bundle.pem"
-    )
-
-    docdb = documentdb_client[DB_NAME]
-    DOC_DB_COLLECTION = docdb[COLLECTION_NAME]
-  return DOC_DB_COLLECTION
-
-
-def _get_context_documents(query: str):
-  embeddings = _get_or_create_embeddings()
-  collection = _get_or_create_collection()
-
-  embedded_query = embeddings.embed_query(query)
-  docs = collection.aggregate([{
-    '$search': {
-      "vectorSearch" : {
-        "vector" : embedded_query,
-        "path": "embedding",
-        "similarity": "euclidean",
-        "k": 2
-      }
-    }
-  }])
-
-  return docs
+  return qa
 
 
 def run_chain(chain, prompt: str, history=[]):
-  # Get the user's question and context documents
-  question = prompt
-
-  docs = _get_context_documents(prompt)
-  context = '\n'.join([doc['text'] for doc in docs])
-
-  # Prepare the input for the LLMChain
-  input_data = {
-    "context": context,
-    "question": question,
-    "chat_history": history,
-  }
-
-  # Run the LLMChain
-  output = chain.invoke(input_data)
-  return {'answer': output['text'], 'source_documents': []}
+  return chain.invoke({"question": prompt, "chat_history": history})
 
 
 if __name__ == "__main__":
