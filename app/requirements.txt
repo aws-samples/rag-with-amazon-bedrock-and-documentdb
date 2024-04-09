@@ -1,5 +1,6 @@
 boto3>=1.26.159
-langchain==0.1.4
-langchain-community==0.0.19
-pymongo==4.6.2
-streamlit==1.30.0
+langchain==0.1.14
+langchain-community==0.0.31
+langchain-core==0.1.40
+pymongo==4.6.3
+streamlit==1.33.0
