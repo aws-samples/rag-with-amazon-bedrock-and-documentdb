@@ -185,7 +185,7 @@ class SageMakerStudioStack(Stack):
       description='https')
     cdk.Tags.of(sg_sagemaker_domain).add('Name', 'sagemaker-studio-domain-sg')
 
-    sm_studio_domain_name = self.node.try_get_context('sagemaker_studio_domain_name')
+    sm_studio_domain_name = self.node.try_get_context('sagemaker_studio_domain_name') or 'rag-with-bedrock-and-docdb'
 
     sagemaker_studio_domain = aws_sagemaker.CfnDomain(self, 'SageMakerStudioDomain',
       auth_mode='IAM', # [SSO | IAM]
