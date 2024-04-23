@@ -3,8 +3,6 @@
 # vim: tabstop=2 shiftwidth=2 softtabstop=2 expandtab
 
 import sys
-sys.path.append('../libs')
-
 import json
 import os
 
@@ -12,12 +10,11 @@ import boto3
 
 from langchain.chains import ConversationalRetrievalChain
 from langchain.prompts import PromptTemplate
-from langchain_community.llms import Bedrock
+from langchain_aws import ChatBedrock as BedrockChat
 from langchain_community.embeddings import BedrockEmbeddings
+from langchain_community.vectorstores import DocumentDBVectorSearch
 
 from pymongo import MongoClient
-
-from docdb_vector_search import DocumentDBAVectorSearch
 
 
 class bcolors:
@@ -45,14 +42,14 @@ def _get_credentials(secret_id: str, region_name: str) -> str:
 def _get_llm(model_id='anthropic.claude-instant-v1', region_name='us-east-1'):
   # configure the properties for Claude
   model_kwargs = {
-    "max_tokens_to_sample": 8000,
+    "max_tokens": 8000,
     "temperature": 0.2,
     "top_k": 250,
     "top_p": 0.9,
     "stop_sequences": ["\\n\\nHuman:"]
   }
 
-  llm = Bedrock(
+  llm = BedrockChat(
     region_name=region_name,
     model_id=model_id,
     model_kwargs=model_kwargs
@@ -90,7 +87,7 @@ def _get_docdb_collection():
 
 def build_chain():
   region = os.environ.get('AWS_REGION', 'us-east-1')
-  model_id = os.environ.get('BEDROCK_MODEL_ID', 'anthropic.claude-instant-v1')
+  model_id = os.environ.get('BEDROCK_MODEL_ID', 'anthropic.claude-v2:1')
 
   llm = _get_llm(model_id=model_id, region_name=region)
 
@@ -99,7 +96,7 @@ def build_chain():
   )
 
   collection = _get_docdb_collection()
-  docdb_vectorstore = DocumentDBAVectorSearch(
+  docdb_vectorstore = DocumentDBVectorSearch(
     collection=collection,
     embedding=embeddings
   )
@@ -164,7 +161,7 @@ if __name__ == "__main__":
     if 'source_documents' in result:
       print(bcolors.OKGREEN + 'Sources:')
       for d in result['source_documents']:
-        print(d.metadata['source'])
+        print(f"{d.metadata['source']}#{d.metadata['page']}")
     print(bcolors.ENDC)
     print(bcolors.OKCYAN + "Ask a question, start a New search: or CTRL-D to exit." + bcolors.ENDC)
     print(">", end=" ", flush=True)

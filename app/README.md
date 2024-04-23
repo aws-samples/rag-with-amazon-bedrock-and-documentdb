@@ -24,7 +24,7 @@ SageMaker Studio provides a convenient platform to host the Streamlit web applic
    export DOCDB_HOST="<i>{docdb-cluster-name}</i>.cluster-<i>{random-id}</i>.<i>{region}</i>.docdb.amazonaws.com"
    export DB_NAME="ragdemo"
    export COLLECTION_NAME="rag"
-   export BEDROCK_MODEL_ID="anthropic.claude-instant-v1"
+   export BEDROCK_MODEL_ID="anthropic.claude-v2:1"
    </pre>
    :information_source: `COLLECTION_NAME` can be found in [data ingestion to vectordb](../data_ingestion_to_vectordb/data_ingestion_to_documentdb.ipynb) step.
 5. When the application runs successfully, you’ll see an output similar to the following (the IP addresses you will see will be different from the ones shown in this example). Note the port number (typically `8501`) from the output to use as part of the URL for app in the next step.
@@ -40,7 +40,7 @@ SageMaker Studio provides a convenient platform to host the Streamlit web applic
    ```
 6. You can access the app in a new browser tab using a URL that is similar to your Studio domain URL. For example, if your Studio URL is `https://d-randomidentifier.studio.us-east-1.sagemaker.aws/jupyter/default/lab?` then the URL for your Streamlit app will be `https://d-randomidentifier.studio.us-east-1.sagemaker.aws/jupyter/default/proxy/8501/app` (notice that `lab` is replaced with `proxy/8501/app`). If the port number noted in the previous step is different from 8501 then use that instead of 8501 in the URL for the Streamlit app.
 
-   The following screenshot shows the app with a couple of user questions.
+   The following screenshot shows the app with a couple of user questions. (e.g., `What are some reasons a highly regulated industry should pick DocumentDB?`)
 
    ![qa-with-llm-and-rag](./qa-with-llm-and-rag.png)
 
@@ -50,6 +50,8 @@ SageMaker Studio provides a convenient platform to host the Streamlit web applic
     * [github.com/aws-samples/amazon-documentdb-samples](https://github.com/aws-samples/amazon-documentdb-samples/)
   * [Build Streamlit apps in Amazon SageMaker Studio (2023-04-11)](https://aws.amazon.com/blogs/machine-learning/build-streamlit-apps-in-amazon-sagemaker-studio/)
   * [Connecting Programmatically to Amazon DocumentDB](https://docs.aws.amazon.com/documentdb/latest/developerguide/connect_programmatically.html#connect_programmatically-tls_enabled)
+  * [Amazon Bedrock - Inference parameters for foundation models](https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters.html)
   * [LangChain](https://python.langchain.com/docs/get_started/introduction.html) - A framework for developing applications powered by language models.
+  * [LangChain Providers - AWS](https://python.langchain.com/docs/integrations/platforms/aws/) - The `LangChain` integrations related to `Amazon AWS` platform.
   * [Streamlit](https://streamlit.io/) - A faster way to build and share data apps
   * [PyMongo](https://pymongo.readthedocs.io/en/stable/) - A Python distribution containing tools for working with [MongoDB](http://www.mongodb.org/).

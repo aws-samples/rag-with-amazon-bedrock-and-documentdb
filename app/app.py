@@ -2,17 +2,21 @@
 # -*- encoding: utf-8 -*-
 # vim: tabstop=2 shiftwidth=2 softtabstop=2 expandtab
 
+import os
 import streamlit as st
 import uuid
 
 import chat_documentdb_and_bedrock as chat_docdb_bedrock
 
 
+BEDROCK_MODEL_ID = os.environ.get('BEDROCK_MODEL_ID', 'anthropic.claude-v2:1')
+
 USER_ICON = "images/user-icon.png"
 AI_ICON = "images/ai-icon.png"
 MAX_HISTORY_LENGTH = 5
 PROVIDER_MAP = {
-  'claude-v2': 'Claude v2'
+  'claude-v2': 'Claude v2',
+  'claude-3': 'Claude v3'
 }
 
 # Check if the user ID is already stored in the session state
@@ -81,7 +85,8 @@ def write_top_bar():
   with col1:
     st.image(AI_ICON, use_column_width='always')
   with col2:
-    selected_provider = 'claude-v2'
+    selected_provider = [k for k in PROVIDER_MAP.keys() if k in BEDROCK_MODEL_ID]
+    selected_provider = selected_provider[0] if selected_provider else BEDROCK_MODEL_ID
     if selected_provider in PROVIDER_MAP:
       provider = PROVIDER_MAP[selected_provider]
     else:
@@ -124,7 +129,7 @@ def handle_input():
   if 'source_documents' in result:
     for d in result['source_documents']:
       if not (d.metadata['source'] in document_list):
-        document_list.append((d.metadata['source']))
+        document_list.append(f"{d.metadata['source']}#{d.metadata['page']}")
 
   st.session_state.answers.append({
     'answer': result,
