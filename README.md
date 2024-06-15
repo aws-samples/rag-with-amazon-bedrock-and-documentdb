@@ -18,7 +18,7 @@ The overall architecture is like this:
 2. Open SageMaker Studio and then open a new terminal.
 3. Run the following commands on the terminal to clone the code repository for this project:
    ```
-   git clone https://github.com/aws-samples/rag-with-amazon-bedrock-and-docdb.git
+   git clone --depth=1 https://github.com/aws-samples/rag-with-amazon-bedrock-and-docdb.git
    ```
 4. Open `data_ingestion_to_documentdb.ipynb` notebook and Run it. (For more information, see [here](./data_ingestion_to_vectordb/data_ingestion_to_documentdb.ipynb))
 5. Run Streamlit application. (For more information, see [here](./app/README.md))
