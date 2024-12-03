@@ -2,7 +2,7 @@
 
 Now we’re ready to run the Streamlit web application for our question answering bot.
 
-SageMaker Studio provides a convenient platform to host the Streamlit web application. The following steps describe how to run the Streamlit app on SageMaker Studio. Alternatively, you could also follow the same procedure to run the app on Amazon EC2 instance or Cloud9 in your AWS Account.
+SageMaker Studio provides a convenient platform to host the Streamlit web application. The following steps describe how to run the Streamlit app on JupyterLab in SageMaker Studio. Alternatively, you could also follow the same procedure to run the app on Amazon EC2 instance or Cloud9 in your AWS Account.
 
 1. Open JupyterLab and then open a new **Terminal**.
 2. Run the following commands on the terminal to clone the code repository for this post and install the Python packages needed by the application:
